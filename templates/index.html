@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MD's AI</title>
+    <style>
+        /* Style the banner */
+        .banner {
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* Style the company name */
+        .company {
+            font-size: 16px;
+            font-weight: normal;
+        }
+        #user_input {
+            width: 100%;
+        }
+
+        /* Style the tab menu */
+        .tab {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+        }
+
+        /* Style the tab buttons */
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+            font-size: 17px;
+        }
+
+        /* Change background color of buttons on hover */
+        .tab button:hover {
+            background-color: #ddd;
+        }
+
+        /* Create an active/current tablink class */
+        .tab button.active {
+            background-color: #ccc;
+        }
+
+        /* Style the tab content */
+        .tabcontent {
+            display: none;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-top: none;
+        }
+    </style>
+    <script>
+        function filterKeyPoints(keyPoints) {
+    const ignoreWords = ["I", "you", "me", "it", "we", "them", "they", "this", "that", "an", "the"];
+    const minLength = 3;
+
+    return keyPoints.filter(keyPoint => {
+        const words = keyPoint.split(' ');
+        return (
+            !ignoreWords.includes(keyPoint) &&
+            words.every(word => word.length >= minLength)
+        );
+    });
+}
+
+
+
+function minimizeTokens(keyPoint) {
+    const stopwords = ["a", "an", "the", "in", "on", "at", "for", "with", "about", "as", "by", "to"];
+    const words = keyPoint.split(" ");
+    const filteredWords = words.filter(word => !stopwords.includes(word.toLowerCase()));
+    return filteredWords.join(" ").replace(/[.,;:]/g, "").trim();
+}
+
+async function uploadFile(event) {
+    event.preventDefault();
+    const fileInput = document.getElementById("file_input");
+    const file = fileInput.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = async function (e) {
+            const fileContent = e.target.result;
+            const fileContentDiv = document.getElementById("file_content");
+            fileContentDiv.innerHTML = '<h2>Text File Content</h2><pre>' + fileContent + '</pre>';
+
+            // Send the file content to the Flask app to extract key points
+            const response = await fetch('/extract_key_points', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: fileContent })
+            });
+
+            const keyPoints = await response.json();
+            console.log(keyPoints);
+            const filteredKeyPoints = filterKeyPoints(keyPoints);
+
+            // Minimize tokens in the key points
+            const minimizedKeyPoints = filteredKeyPoints.map(minimizeTokens);
+
+            // Update the content of the key_points div
+            const keyPointsDiv = document.getElementById("key_points");
+            keyPointsDiv.innerHTML = '<h2>Extracted Key Points</h2><ul>';
+            for (const keyPoint of minimizedKeyPoints) {
+                keyPointsDiv.innerHTML += `<li>${keyPoint}</li>`;
+            }
+            keyPointsDiv.innerHTML += '</ul>';
+
+            // Calculate token count and update the heading
+            const tokenCount = await calculateTokens();
+            keyPointsDiv.querySelector('h2').innerHTML = `Extracted Key Points - Total Tokens: ${tokenCount}`;
+        };
+        reader.readAsText(file);
+    }
+}
+
+
+
+
+
+async function calculateTokens() {
+    const keyPointsDiv = document.getElementById("key_points");
+    const text = keyPointsDiv.innerText;
+    
+    const response = await fetch('/count_tokens', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text: text })
+    });
+    
+    const data = await response.json();
+    const tokenCount = data.token_count;
+    
+    console.log("Token count:", tokenCount);
+    return tokenCount;
+}
+
+        function submitForm(event) {
+            event.preventDefault();
+            const user_input = document.getElementById("user_input").value;
+            document.getElementById("submit_button").disabled = true;
+            fetch("/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ user_input: user_input })
+            }).then(response => response.json())
+            .then(data => {
+                const chat = document.getElementById("chat");
+                chat.innerHTML += `<p><strong>User:</strong> ${user_input}</p>`;
+                chat.innerHTML += `<p><strong>Chatbot:</strong> ${data.response_text}</p>`;
+                document.getElementById("user_input").value = "";
+                document.getElementById("submit_button").disabled = false;
+            });
+        }
+
+        function openPage(evt, pageName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(pageName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+    </script>
+<title>TAIM</title> <style type="text/css"> body { background-color: #bbb; } h1 { color: #fff; font-size: 72px; text-align: center; text-shadow: 0px 0px 10px #FFF; letter-spacing: 10px; font-family: 'Roboto', sans-serif; } h2 { color: #fff; font-size: 15px; text-align: center; text-shadow: 0px 0px 10px #FFF; letter-spacing: 10px; font-family: 'Roboto', sans-serif; }  </style> </head>
+<body>
+    <div class="banner">
+        <h1>TAIM (t&#299;m)</h1>
+        <h2>A MICHAEL DOUGLAS SOLUTION</h2>
+        
+    </div>
+    
+    <div class="tab">
+        <button class="tablinks active" onclick="openPage(event, 'ChatPage')">Chat</button>
+        <button class="tablinks" onclick="openPage(event, 'SecondTab')">File Exploration</button>
+    </div>
+
+    <div id="ChatPage" class="tabcontent" style="display:block;">
+        <div id="chat" style="border: 40px ridge rgba(133, 133, 133, 0.507); padding: 10px; text-align: center; width: 85%; height: 400px; overflow-y: auto; margin: 0 auto;">
+            <h2>Chat</h2>
+            {% for message in chat|reverse %}
+                <p><strong>{{ message.sender }}:</strong> {{ message.text }}</p>
+            {% endfor %}
+        </div>
+        <form onsubmit="submitForm(event)" style="text-align: center;">
+            <label for="user_input">Your message:</label>
+            <input type="text" id="user_input" name="user_input" required>
+            <input type="submit" id="submit_button" value="Submit">
+        </form>
+    </div>
+
+    <div id="SecondTab" class="tabcontent">
+        <div style="display: flex; justify-content: center;">
+            <div id="file_content" style="border: 1px solid #ccc; padding: 10px; width: 45%; height: 400px; overflow-y: auto; margin-right: 20px;">
+                <h2>Text File Content</h2>
+            </div>
+            <div>
+                <div id="chat_second" style="border: 1px solid #ccc; padding: 10px; text-align: center; width: 85%; height: 400px; overflow-y: auto; margin: 0 auto;">
+                    <h2>Chat</h2>
+                    {% for message in chat|reverse %}
+                        <p><strong>{{ message.sender }}:</strong> {{ message.text }}</p>
+                    {% endfor %}
+                </div>
+                <form onsubmit="submitForm(event)" style="text-align: center;">
+                    <label for="user_input">Your message:</label>
+                    <input type="text" id="user_input" name="user_input" required>
+                    <input type="submit" id="submit_button" value="Submit">
+                </form>
+                <form enctype="multipart/form-data" onsubmit="uploadFile(event)" style="text-align: center;">
+                    <label for="file_input">Choose a text file:</label>
+                    <input type="file" id="file_input" name="file_input" accept=".txt">
+                    <input type="submit" id="upload_button" value="Upload">
+                </form>
+            </div>
+            <div id="key_points" style="border: 1px solid #ccc; padding: 10px; text-align: center; width: 85%; margin: 0 auto;">
+                <h2>Extracted Key Points - Total Tokens: <span id="token_count"></span></h2>
+            </div>            
+        </div>
+    </div>
+
+    <script>
+        var chatWindow = document.getElementById("chat");
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    </script>
+</body>
+</html>
